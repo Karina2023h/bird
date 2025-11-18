@@ -1,238 +1,308 @@
 <!DOCTYPE html>
 <html lang="uk">
-
 <head>
   <meta charset="UTF-8" />
-  <title>Магічне створення портрета</title>
+  <title>Магічне створення портрета — Світлий Зорепад</title>
+
   <style>
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background-color: #fdf6f0;
+      overflow: hidden;
+      height: 100vh;
+
+      /* яскравий світлий фон */
+      background: linear-gradient(120deg, #ffe8ea, #ffd9c8, #fff5e7);
+      background-size: 300% 300%;
+      animation: bgMove 18s ease-in-out infinite;
+
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 80vh;
-      overflow: hidden;
+      justify-content: center; /* по вертикалі */
+      align-items: center;     /* по горизонталі */
       position: relative;
     }
 
-    h1 {
-      color: #333;
-      margin-bottom: 10px;
+    @keyframes bgMove {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
     }
 
+    /* -------------------------
+          ФОНОВИЙ ЯСКРАВИЙ ЗОРЕПАД
+    ------------------------- */
+    #starfall {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .star {
+      position: absolute;
+      width: 2px;
+      height: 70px;
+      background: linear-gradient(180deg, rgba(255,255,255,1), rgba(255,255,255,0));
+      opacity: 0.85;
+      transform: rotate(35deg);
+      filter: blur(1px);
+      animation: fall 2s linear infinite;
+    }
+
+    @keyframes fall {
+      0% {
+        transform: translateY(-150px) translateX(0) rotate(35deg);
+        opacity: 0;
+      }
+      15% {
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(900px) translateX(-300px) rotate(35deg);
+        opacity: 0;
+      }
+    }
+
+    /* -------------------------
+          ТВОЇ ЕЛЕМЕНТИ
+    ------------------------- */
+    .hidden { display: none; }
+
     button {
-      margin-top: 25px;
-      margin-bottom: 15px;
-      padding: 32px 23px;
-      font-size: 58px;
-      background: linear-gradient(135deg, #ff7e5f, #feb47b);
+      padding: 26px 40px;
+      font-size: 40px;
+      background: linear-gradient(135deg, #ff9a76, #ff5e7d);
       border: none;
-      border-radius: 80px;
+      border-radius: 100px;
       color: white;
       font-weight: bold;
       cursor: pointer;
-      transition: transform 0.2s ease;
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-      z-index: 2;
+      transition: transform 0.25s ease, opacity 0.5s ease;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.20);
+      z-index: 5;
+      opacity: 0;
     }
+    .btn-visible { opacity: 1; }
 
     button:hover {
-      transform: scale(1.05);
+      transform: scale(1.07);
     }
 
     canvas {
       margin-top: 20px;
-      border-radius: 12px;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+      border-radius: 18px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.18);
       background-color: #fff;
       opacity: 0;
-      transition: opacity 1s ease;
+      transition: opacity 1.2s ease;
+      z-index: 3;
     }
 
-    .visible {
-      opacity: 1;
-    }
+    .visible { opacity: 1; }
 
     #particles {
       position: absolute;
-      width: 100%;
-      height: 100%;
-      z-index: 1;
+      inset: 0;
+      z-index: 4;
       pointer-events: none;
     }
 
     #finalText {
-      margin-top: 20px;
-      font-size: 32px;
-      color: #333;
-      font-weight: 600;
+      margin-top: 25px;
+      font-size: 42px;
+      color: #5a4a4a;
+      font-weight: 700;
       text-align: center;
       opacity: 0;
-      transition: opacity 1s ease;
-      user-select: none;
+      transition: opacity 1.5s ease;
+      z-index: 4;
     }
 
-    #finalText.visible {
-      opacity: 1;
-    }
+    #finalText.visible { opacity: 1; }
   </style>
 </head>
 
 <body>
-  <button>✨ Натисни на мене ✨</button>
-  <button onclick="startDrawing()">✨ А тепер на мене ✨</button>
+
+  <div id="starfall"></div>
+
+  <button id="btn1">✨ Натисни мене ✨</button>
+  <button id="btn2" class="hidden">✨ Тепер мене ✨</button>
+
   <canvas id="canvas" width="850" height="850"></canvas>
+
   <div id="particles"></div>
 
-  <!-- 🎵 Аудіо -->
   <audio id="bgMusic" src="./Mandy_Moore_-_Only_Hope.mp3" preload="auto"></audio>
 
-  <div id="finalText">Моя любима сістер😊</div>
+  <div id="finalText">Хай це трошки зробить твій день світлішим 💛</div>
 
   <script>
-    const music = document.getElementById("bgMusic");
-    music.volume = 0.3;
-    let musicStarted = false;
+    /* ----------------------------
+          СВІТЛИЙ ЗОРЕПАД
+    ---------------------------- */
+    const starfall = document.getElementById("starfall");
 
-    function startMusicOnce() {
-      if (!musicStarted) {
-        music.play().then(() => {
-          setTimeout(() => {
-            music.pause();
-            music.currentTime = 0;
-          }, 25000); // Зупинити через 25 секунд
-        }).catch(() => { /* Браузер заблокував – нічого не робимо */ });
+    function createStar() {
+      const star = document.createElement("div");
+      star.className = "star";
 
-        musicStarted = true;
-        window.removeEventListener("click", startMusicOnce);
-      }
+      star.style.left = Math.random() * window.innerWidth + "px";
+
+      star.style.animationDuration = (1.6 + Math.random() * 1.6) + "s";
+      star.style.animationDelay = Math.random() * 1.2 + "s";
+
+      starfall.appendChild(star);
+
+      setTimeout(() => star.remove(), 3000);
     }
 
-    // Запускаємо музику при першому кліку
-    window.addEventListener("click", startMusicOnce);
+    setInterval(createStar, 120);
 
-    // --- Малювання ---
+
+    /* ----------------------------
+           ВЕСЬ ТВОЙ КОД
+    ---------------------------- */
+
+    const btn1 = document.getElementById("btn1");
+    const btn2 = document.getElementById("btn2");
+    const music = document.getElementById("bgMusic");
+    let musicStarted = false;
+    music.volume = 0.35;
+
+    setTimeout(() => btn1.classList.add("btn-visible"), 600);
+
+    btn1.onclick = () => {
+      if (!musicStarted) {
+        music.play();
+        musicStarted = true;
+
+        setTimeout(() => {
+          music.pause();
+          music.currentTime = 0;
+        }, 40000);
+      }
+
+      btn1.style.opacity = 0;
+      setTimeout(() => btn1.classList.add("hidden"), 600);
+
+      setTimeout(() => {
+        btn2.classList.remove("hidden");
+        btn2.classList.add("btn-visible");
+      }, 900);
+    };
+
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     const img = new Image();
-    img.src = './snapedit_1763492000742.jpeg'; // заміни на свій файл
+    img.src = './snapedit_1763492000742.jpeg';
 
-    const step = 32;
+    const step = 28;
     const positions = [];
-
-    let drawOffsetX = 0;
-    let drawOffsetY = 0;
-    let scale = 1;
+    let scale = 1, drawOffsetX = 0, drawOffsetY = 0;
 
     img.onload = () => {
-      const imgWidth = img.width;
-      const imgHeight = img.height;
+      const iw = img.width;
+      const ih = img.height;
+      scale = Math.min(canvas.width/iw, canvas.height/ih);
 
-      const scaleX = canvas.width / imgWidth;
-      const scaleY = canvas.height / imgHeight;
-      scale = Math.min(scaleX, scaleY);
+      const sw = iw * scale;
+      const sh = ih * scale;
+      drawOffsetX = (canvas.width - sw)/2;
+      drawOffsetY = (canvas.height - sh)/2;
 
-      const scaledWidth = imgWidth * scale;
-      const scaledHeight = imgHeight * scale;
-
-      drawOffsetX = (canvas.width - scaledWidth) / 2;
-      drawOffsetY = (canvas.height - scaledHeight) / 2;
-
-      for (let y = 0; y < imgHeight; y += step) {
-        for (let x = 0; x < imgWidth; x += step) {
-          positions.push({ x, y });
+      for (let y=0; y<ih; y+=step) {
+        for (let x=0; x<iw; x+=step) {
+          positions.push({x,y});
         }
       }
-
       shuffleArray(positions);
     };
 
-    function shuffleArray(array) {
-      for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
+    function shuffleArray(a){
+      for (let i=a.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [a[i],a[j]]=[a[j],a[i]];
       }
     }
 
-    function startDrawing() {
-      // Сховати текст, якщо він був раніше
+    btn2.onclick = () => {
+      btn2.style.opacity = 0;
+      setTimeout(() => btn2.classList.add("hidden"), 700);
+      startDrawing();
+    };
+
+    function startDrawing(){
       const finalText = document.getElementById('finalText');
+      canvas.classList.add('visible');
       finalText.classList.remove('visible');
+      ctx.clearRect(0,0,canvas.width,canvas.height);
 
-      canvas.classList.add("visible");
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
       shuffleArray(positions);
+      let i=0;
 
-      let i = 0;
-      const interval = setInterval(() => {
-        if (i >= positions.length) {
+      const interval = setInterval(()=>{
+        if(i>=positions.length){
           clearInterval(interval);
           triggerFireworks();
-          // Показати текст
           finalText.classList.add('visible');
           return;
         }
 
         const pos = positions[i];
-        const sx = pos.x;
-        const sy = pos.y;
-        const sWidth = step;
-        const sHeight = step;
         const dx = drawOffsetX + pos.x * scale;
         const dy = drawOffsetY + pos.y * scale;
-        const dWidth = step * scale;
-        const dHeight = step * scale;
+        const dW = step * scale;
+        const dH = step * scale;
 
-        ctx.drawImage(img, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+        ctx.drawImage(img, pos.x, pos.y, step, step, dx, dy, dW, dH);
 
-        ctx.fillStyle = `rgba(255, 192, 203, 0.07)`;
-        ctx.fillRect(dx, dy, dWidth, dHeight);
+        ctx.fillStyle = 'rgba(255, 230, 240, 0.08)';
+        ctx.fillRect(dx,dy,dW,dH);
 
         i++;
-      }, 10);
+      }, 9);
     }
 
-    function triggerFireworks() {
+    function triggerFireworks(){
       const container = document.getElementById('particles');
-      const canvasRect = canvas.getBoundingClientRect();
+      const rect = canvas.getBoundingClientRect();
+      const cx = rect.width/2;
+      const cy = rect.height/2;
 
-      const centerX = canvasRect.left + canvasRect.width / 2;
-      const centerY = canvasRect.top + canvasRect.height / 2;
+      for(let i=0;i<65;i++){
+        const p=document.createElement('div');
+        p.style.position='absolute';
+        p.style.width='12px';
+        p.style.height='12px';
+        p.style.borderRadius='50%';
+        p.style.background=randomColor();
+        p.style.left = cx+'px';
+        p.style.top = cy+'px';
+        p.style.opacity='0.9';
+        p.style.transition='transform 1.3s ease-out, opacity 1.5s ease-out';
+        container.appendChild(p);
 
-      for (let i = 0; i < 50; i++) {
-        const particle = document.createElement('div');
-        particle.style.position = 'absolute';
-        particle.style.width = '10px';
-        particle.style.height = '10px';
-        particle.style.borderRadius = '50%';
-        particle.style.background = randomColor();
-
-        // Позиція по центру канваса
-        particle.style.left = centerX + 'px';
-        particle.style.top = centerY + 'px';
-
-        particle.style.opacity = '0.8';
-        particle.style.transition = 'transform 1s ease-out, opacity 1.2s ease-out';
-        container.appendChild(particle);
-
-        requestAnimationFrame(() => {
-          particle.style.transform = `translate(${(Math.random() - 0.5) * 600}px, ${-Math.random() * 500}px)`;
-          particle.style.opacity = '0';
+        requestAnimationFrame(()=>{
+          p.style.transform=`translate(${(Math.random()-0.5)*700}px, ${(Math.random()-0.5)*700}px)`;
+          p.style.opacity='0';
         });
 
-        setTimeout(() => particle.remove(), 1500);
+        setTimeout(()=>p.remove(),1700);
       }
     }
 
-    function randomColor() {
-      const colors = ['#ff7e5f', '#feb47b', '#f67280', '#c06c84', '#6c5b7b', '#355c7d'];
-      return colors[Math.floor(Math.random() * colors.length)];
+    function randomColor(){
+      const c=['#ff6b6b','#ff9a76','#feca57','#48dbfb','#9b59b6','#54a0ff'];
+      return c[Math.floor(Math.random()*c.length)];
     }
+
   </script>
 
 </body>
-
 </html>
