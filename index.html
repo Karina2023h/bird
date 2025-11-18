@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Магічне створення портрета</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #fdf6f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 80vh;
+      overflow: hidden;
+      position: relative;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    button {
+      margin-top: 25px;
+      margin-bottom: 15px;
+      padding: 32px 23px;
+      font-size: 58px;
+      background: linear-gradient(135deg, #ff7e5f, #feb47b);
+      border: none;
+      border-radius: 80px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      z-index: 2;
+    }
+
+    button:hover {
+      transform: scale(1.05);
+    }
+
+    canvas {
+      margin-top: 20px;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+      background-color: #fff;
+      opacity: 0;
+      transition: opacity 1s ease;
+    }
+
+    .visible {
+      opacity: 1;
+    }
+
+    #particles {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    #finalText {
+      margin-top: 20px;
+      font-size: 32px;
+      color: #333;
+      font-weight: 600;
+      text-align: center;
+      opacity: 0;
+      transition: opacity 1s ease;
+      user-select: none;
+    }
+
+    #finalText.visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body>
+  <button>✨ Натисни на мене ✨</button>
+  <button onclick="startDrawing()">✨ А тепер на мене ✨</button>
+  <canvas id="canvas" width="850" height="850"></canvas>
+  <div id="particles"></div>
+
+  <!-- 🎵 Аудіо -->
+  <audio id="bgMusic" src="./Mandy_Moore_-_Only_Hope.mp3" preload="auto"></audio>
+
+  <div id="finalText">Моя любима сістер😊</div>
+
+  <script>
+    const music = document.getElementById("bgMusic");
+    music.volume = 0.3;
+    let musicStarted = false;
+
+    function startMusicOnce() {
+      if (!musicStarted) {
+        music.play().then(() => {
+          setTimeout(() => {
+            music.pause();
+            music.currentTime = 0;
+          }, 25000); // Зупинити через 25 секунд
+        }).catch(() => { /* Браузер заблокував – нічого не робимо */ });
+
+        musicStarted = true;
+        window.removeEventListener("click", startMusicOnce);
+      }
+    }
+
+    // Запускаємо музику при першому кліку
+    window.addEventListener("click", startMusicOnce);
+
+    // --- Малювання ---
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.src = './snapedit_1763492000742.jpeg'; // заміни на свій файл
+
+    const step = 32;
+    const positions = [];
+
+    let drawOffsetX = 0;
+    let drawOffsetY = 0;
+    let scale = 1;
+
+    img.onload = () => {
+      const imgWidth = img.width;
+      const imgHeight = img.height;
+
+      const scaleX = canvas.width / imgWidth;
+      const scaleY = canvas.height / imgHeight;
+      scale = Math.min(scaleX, scaleY);
+
+      const scaledWidth = imgWidth * scale;
+      const scaledHeight = imgHeight * scale;
+
+      drawOffsetX = (canvas.width - scaledWidth) / 2;
+      drawOffsetY = (canvas.height - scaledHeight) / 2;
+
+      for (let y = 0; y < imgHeight; y += step) {
+        for (let x = 0; x < imgWidth; x += step) {
+          positions.push({ x, y });
+        }
+      }
+
+      shuffleArray(positions);
+    };
+
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    function startDrawing() {
+      // Сховати текст, якщо він був раніше
+      const finalText = document.getElementById('finalText');
+      finalText.classList.remove('visible');
+
+      canvas.classList.add("visible");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      shuffleArray(positions);
+
+      let i = 0;
+      const interval = setInterval(() => {
+        if (i >= positions.length) {
+          clearInterval(interval);
+          triggerFireworks();
+          // Показати текст
+          finalText.classList.add('visible');
+          return;
+        }
+
+        const pos = positions[i];
+        const sx = pos.x;
+        const sy = pos.y;
+        const sWidth = step;
+        const sHeight = step;
+        const dx = drawOffsetX + pos.x * scale;
+        const dy = drawOffsetY + pos.y * scale;
+        const dWidth = step * scale;
+        const dHeight = step * scale;
+
+        ctx.drawImage(img, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+
+        ctx.fillStyle = `rgba(255, 192, 203, 0.07)`;
+        ctx.fillRect(dx, dy, dWidth, dHeight);
+
+        i++;
+      }, 10);
+    }
+
+    function triggerFireworks() {
+      const container = document.getElementById('particles');
+      const canvasRect = canvas.getBoundingClientRect();
+
+      const centerX = canvasRect.left + canvasRect.width / 2;
+      const centerY = canvasRect.top + canvasRect.height / 2;
+
+      for (let i = 0; i < 50; i++) {
+        const particle = document.createElement('div');
+        particle.style.position = 'absolute';
+        particle.style.width = '10px';
+        particle.style.height = '10px';
+        particle.style.borderRadius = '50%';
+        particle.style.background = randomColor();
+
+        // Позиція по центру канваса
+        particle.style.left = centerX + 'px';
+        particle.style.top = centerY + 'px';
+
+        particle.style.opacity = '0.8';
+        particle.style.transition = 'transform 1s ease-out, opacity 1.2s ease-out';
+        container.appendChild(particle);
+
+        requestAnimationFrame(() => {
+          particle.style.transform = `translate(${(Math.random() - 0.5) * 600}px, ${-Math.random() * 500}px)`;
+          particle.style.opacity = '0';
+        });
+
+        setTimeout(() => particle.remove(), 1500);
+      }
+    }
+
+    function randomColor() {
+      const colors = ['#ff7e5f', '#feb47b', '#f67280', '#c06c84', '#6c5b7b', '#355c7d'];
+      return colors[Math.floor(Math.random() * colors.length)];
+    }
+  </script>
+
+</body>
+
+</html>
